@@ -536,54 +536,39 @@ This approach  enables flexible support of multiple clients for a MIX channel pa
     </section3>
   </section2>
 
-  <section2 topic="Channels PEP Node" anchor="channels-node">
+  <section2 topic="Joined Channels" anchor="channels-node">
     <p>
-      As part of the channel joining process, the user's server MUST add the MIX channel to the user's private channels PEP node.
-      This PEP node enables the user's client to quickly determine which channels the user has joined and which stable participant ids it has in those channels.
-      The node MUST only be edited by the server and MUST only be accesible to the user, not other contacts subscribed to the user's presence.
+      As part of the channel joining process, the user's server MUST store the MIX channels has joined.
+      The joined channels are only edited by the user's server, through the &lt;client-join/&gt; command.
+      The user's client can fetch the joined channels on connect to quickly display the channels to the user and to get the participant ids it has in those channels.
+      By requesting the joined channels the client automatically subscribes to changes to the joined channels.
     </p>
 
     <section3 topic="Retrieving joined channels" anchor="retrieve-joined-channels">
       <p>
-        To retrieve all currently joined channels a PubSub query on the user's own virtual PubSub service is made.
-        The used PEP node is 'urn:xmpp:mix:pam:channels'.
+        To retrieve all currently joined channels an IQ get request is made with no 'to' attribute and so is handled by the user's server.
+        The request consists of a &lt;channels/&gt; element qualified by the 'urn:xmpp:mix:pam:channels:0' namespace.
       </p>
       <example caption="The client requets all joined MIX channels"><![CDATA[
-<iq type='get' to='hag66@shakespeare.example' id='items1'>
-  <pubsub xmlns='http://jabber.org/protocol/pubsub'>
-    <items node='urn:xmpp:mix:pam:channels'/>
-  </pubsub>
+<iq type='get' id='channels1'>
+  <channels xmlns='urn:xmpp:mix:pam:channels:0'/>
 </iq>
 ]]></example>
       <p>
         Upon that the server returns all currently joined channels.
-        Each channel is represented by one PubSub item.
-        The id of the item MUST be the channel JID.
-        Each item MUST have a &lt;channel/&gt; element qualified by the 'urn:xmpp:mix:pam:channels:0' namespace.
-        The &lt;channel/&gt; element MUST also include a 'participant-id' attribute that is the stable ID of the client.
-        This facilitates the client to match messages that reference this stable ID.
+        The &lt;channels/&gt; element contains one element for each joined channel.
+        The &lt;channel/&gt; elements MUST have a 'jid' attribute containing the channel's JID and a 'participant-id' attribute containing the stable participant id of the client in this channel.
       </p>
       <p>
-        A server MUST only return the joined channels to the user, e.g. it MUST NOT return the channels joined by Bob to Alice.
+          
       </p>
       <example caption="The user's server returns all joined channels"><![CDATA[
-<iq type='result'
-    from='hag66@shakespeare.example'
-    to='hag66@shakespeare.example/UUID-a1j/7533'
-    id='items1'>
-  <pubsub xmlns='http://jabber.org/protocol/pubsub'>
-    <items node='urn:xmpp:mix:pam:channels'>
-      <item id='coven@mix.shakespeare.example'>
-        <channel xmlns='urn:xmpp:mix:pam:channels:0' participant-id='123456'/>
-      </item>
-      <item id='cauldron-cooking@mix.shakespeare.example'>
-        <channel xmlns='urn:xmpp:mix:pam:channels:0' participant-id='234567'/>
-      </item>
-      <item id='balcony@example.net'>
-        <channel xmlns='urn:xmpp:mix:pam:channels:0' participant-id='345678'/>
-      </item>
-    </items>
-  </pubsub>
+<iq type='result' id='channels1'>
+  <channels xmlns='urn:xmpp:mix:pam:channels:0'>
+    <channel jid='coven@mix.shakespeare.example' participant-id='123456'/>
+    <channel jid='cauldron-cooking@mix.shakespeare.example' participant-id='234567'/>
+    <channel jid='balcony@example.net' participant-id='345678'/>
+  </channels>
 </iq>
 ]]></example>
     </section3>
@@ -626,7 +611,7 @@ This approach  enables flexible support of multiple clients for a MIX channel pa
 <message from='hag66@shakespeare.example'
          to='hag66@shakespeare.example/UUID-a1j/7533'
          id='joined-channel'>
-  <event xmlns='http://jabber.org/protocol/pubsub#event'>
+  <event xmlns='http://jabber.org/protocol/query#event'>
     <items node='urn:xmpp:mix:pam:channels'>
       <item id='balcony@example.net'>
         <channel xmlns='urn:xmpp:mix:pam:channels:0' participant-id='345678'/>
@@ -639,7 +624,7 @@ This approach  enables flexible support of multiple clients for a MIX channel pa
 <message from='hag66@shakespeare.example'
          to='hag66@shakespeare.example/UUID-a1j/7533'
          id='left-channel'>
-  <event xmlns='http://jabber.org/protocol/pubsub#event'>
+  <event xmlns='http://jabber.org/protocol/query#event'>
     <items node='urn:xmpp:mix:pam:channels'>
       <retract id='balcony@example.net'/>
     </items>
